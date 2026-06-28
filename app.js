@@ -20,6 +20,7 @@ let currentSession = null;
 let searchQuery = '';
 let moreView = 'list'; // 'list' | 'consent' | 'about' | 'contact'
 let openDays = new Set([SCHEDULE[0].day]); // collapsible schedule; first day open by default
+let openGroups = new Set([RESEARCH_TOPIC_GROUPS[0].category]); // Match topic accordion state
 
 function toggleDay(day) {
   if (openDays.has(day)) openDays.delete(day); else openDays.add(day);
@@ -59,10 +60,12 @@ function fillSelect(id, opts) {
     '<option value="" disabled selected>Select…</option>' + opts.map((o) => `<option>${o}</option>`).join('');
 }
 function cloudOn() { return !!CONFIG.SUPABASE_URL && !!CONFIG.SUPABASE_ANON_KEY; }
+// Returns true on success (or in demo mode). Returns false if the cloud write
+// failed, so callers can warn instead of silently losing data.
 async function sb(table, row) {
-  if (!cloudOn()) return;
+  if (!cloudOn()) return true;
   try {
-    await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/${table}`, {
+    const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/${table}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -72,7 +75,8 @@ async function sb(table, row) {
       },
       body: JSON.stringify([row]),
     });
-  } catch (e) {}
+    return res.ok;
+  } catch (e) { return false; }
 }
 
 // ---------- onboarding ----------
@@ -98,7 +102,8 @@ async function submitRegister() {
   if (!badge || !gender || !race || !hispanic || !career) { alert('Please fill in every field.'); return; }
   reg = { badge, gender, race, hispanic, career };
   localStorage.setItem('reg', JSON.stringify(reg));
-  await sb('participants', { badge_id: badge, gender, race, hispanic, career_stage: career });
+  const ok = await sb('participants', { badge_id: badge, gender, race, hispanic, career_stage: career });
+  if (cloudOn() && !ok) alert('Saved on this device, but we could not reach the server. Please check your connection; it will not re-send automatically.');
   showMain('program');
 }
 
@@ -231,7 +236,7 @@ function renderTopics() {
   const host = document.getElementById('topics');
   if (!host) return;
   host.innerHTML = RESEARCH_TOPIC_GROUPS.map((g, gi) => {
-    const open = gi === 0;
+    const open = openGroups.has(g.category);
     const items = g.topics.map((t) => {
       const sel = selectedTopics.has(t) ? 'sel' : '';
       return `<div class="topic ${sel}" onclick="toggleTopic('${t.replace(/'/g, "\\'")}')"><span>${t}</span><span class="mark">${selectedTopics.has(t) ? '●' : '○'}</span></div>`;
@@ -241,11 +246,9 @@ function renderTopics() {
   }).join('');
 }
 function toggleGroup(gi) {
-  const body = document.querySelector(`[data-body="${gi}"]`);
-  const chev = document.querySelector(`.chev[data-g="${gi}"]`);
-  const show = body.style.display === 'none';
-  body.style.display = show ? '' : 'none';
-  if (chev) chev.textContent = show ? '▲' : '▼';
+  const cat = RESEARCH_TOPIC_GROUPS[gi].category;
+  if (openGroups.has(cat)) openGroups.delete(cat); else openGroups.add(cat);
+  renderTopics();
 }
 function toggleTopic(t) {
   if (selectedTopics.has(t)) selectedTopics.delete(t); else selectedTopics.add(t);
@@ -260,7 +263,8 @@ async function joinMatch() {
   const arm = isTreatment(reg.badge) ? 'treatment' : 'control';
   match = { name, affiliation: affil, topics, arm };
   localStorage.setItem('match', JSON.stringify(match));
-  await sb('match_profiles', { badge_id: reg.badge, name, affiliation: affil, interests: topics, arm });
+  const ok = await sb('match_profiles', { badge_id: reg.badge, name, affiliation: affil, interests: topics, arm });
+  if (cloudOn() && !ok) alert('Saved on this device, but we could not reach the server. Please check your connection.');
   renderMatch();
 }
 
@@ -270,10 +274,10 @@ function renderMatches() {
     ? `<div class="card"><div class="rtext">No matches yet. Add more interests in your profile to find people.</div></div>`
     : list.map((m) => `
       <div class="match">
-        <div class="head"><div class="avatar">${m.name.charAt(0)}</div><div><div class="name">${m.name}</div><div class="affil">${m.affiliation}</div></div></div>
-        <div class="tags">${m.sharedTopics.map((t) => `<span class="tag">${t}</span>`).join('')}</div>
+        <div class="head"><div class="avatar">${escapeHtml(m.name.charAt(0))}</div><div><div class="name">${escapeHtml(m.name)}</div><div class="affil">${escapeHtml(m.affiliation)}</div></div></div>
+        <div class="tags">${m.sharedTopics.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join('')}</div>
         <button class="btn outline" style="margin-top:0" onclick="toggleEmail('${m.id}')">Email</button>
-        <div class="email ${revealed.has(m.id) ? '' : 'hidden'}">${m.email}</div>
+        <div class="email ${revealed.has(m.id) ? '' : 'hidden'}">${escapeHtml(m.email)}</div>
       </div>`).join('');
   setContent(`<h1>Match</h1><p class="sub">Scholars to meet at RC28</p>${cards}`);
 }

@@ -1,6 +1,6 @@
 /* OpenRC28 service worker: offline app shell + push handling. */
-const CACHE = 'openrc28-v1';
-const ASSETS = ['./', './index.html', './styles.css', './config.js', './app.js', './icon.png', './manifest.webmanifest'];
+const CACHE = 'openrc28-v2';
+const ASSETS = ['./', './index.html', './styles.css', './config.js', './sessions.js', './app.js', './icon.png', './manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)));
@@ -17,8 +17,10 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     fetch(e.request)
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+        if (res.ok && new URL(e.request.url).origin === self.location.origin) {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+        }
         return res;
       })
       .catch(() => caches.match(e.request))
