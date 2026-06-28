@@ -152,6 +152,21 @@ button { font-family: inherit; cursor: pointer; }
 .mrow .ico { font-size: 18px; }
 .mrow .ml { flex: 1; font-size: 15px; font-weight: 600; }
 
+/* inline share icon (shows users exactly what to look for) */
+.shareico { display: inline-flex; align-items: center; justify-content: center; vertical-align: -4px;
+  width: 24px; height: 24px; border-radius: 6px; background: rgba(255,255,255,.18); color: #fff; }
+
+/* install guide modal (bottom sheet) */
+.modal { position: fixed; inset: 0; background: rgba(20,15,10,.5); z-index: 50; display: flex; align-items: flex-end; justify-content: center; }
+.sheet { background: var(--card); color: var(--navy); width: 100%; max-width: 480px; border-radius: 20px 20px 0 0;
+  padding: 24px 22px max(24px, env(safe-area-inset-bottom)); position: relative; }
+.x2 { position: absolute; top: 14px; right: 16px; background: none; border: none; font-size: 24px; color: var(--gray); }
+.ghead { font-size: 18px; font-weight: 800; margin: 0 0 4px; color: var(--navy); }
+.gsub { font-size: 14px; color: var(--gray); margin: 0 0 18px; }
+.gstep { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; font-size: 14.5px; line-height: 1.5; }
+.gstep .shareico { background: var(--light); color: var(--brown); vertical-align: -6px; }
+.gnum { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; background: var(--brown); color: #fff; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center; }
+
 /* add-to-home-screen banner */
 .a2hs { position: fixed; left: 50%; transform: translateX(-50%); bottom: 78px; width: calc(100% - 28px); max-width: 452px;
   background: var(--navy); color: #fff; border-radius: 14px; padding: 12px 14px; display: flex; gap: 10px; align-items: center;

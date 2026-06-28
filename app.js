@@ -31,6 +31,12 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+// The iOS Safari "Share" icon (square with an up arrow), so users know what to look for.
+const SHARE_SVG = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
+
+function openInstallGuide() { document.getElementById('install-guide').classList.remove('hidden'); }
+function closeInstallGuide() { document.getElementById('install-guide').classList.add('hidden'); }
+
 // ---------- helpers ----------
 function go(id) {
   document.getElementById('tabbar').classList.add('hidden');
@@ -358,8 +364,10 @@ function maybeShowA2HS() {
     act.onclick = async () => { banner.classList.add('hidden'); deferredPrompt.prompt(); deferredPrompt = null; };
     banner.classList.remove('hidden');
   } else if (isIOS) {
-    text.innerHTML = 'Add to Home Screen: tap Share, then “Add to Home Screen.”';
-    act.classList.add('hidden');
+    text.innerHTML = `<span class="shareico">${SHARE_SVG}</span> Add OpenRC28 to your Home Screen for one-tap access.`;
+    act.textContent = 'How?';
+    act.classList.remove('hidden');
+    act.onclick = openInstallGuide;
     banner.classList.remove('hidden');
   }
 }
