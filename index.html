@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>OpenRC28</title>
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="OpenRC28" />
+  <meta name="theme-color" content="#faf4eb" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ===== Onboarding ===== -->
+    <section id="welcome" class="screen active">
+      <div class="center">
+        <div class="logo"><div class="dot top"></div><div class="dot bot"></div></div>
+        <div class="steplabel">Open Conference Lab</div>
+        <h1>Welcome to RC28</h1>
+        <p class="sub">We are exploring new ways to understand and improve how scholars connect at conferences.</p>
+        <div class="note">Your privacy is protected. No audio or video is ever recorded.</div>
+        <button class="btn" onclick="go('consent')">Get Started</button>
+      </div>
+    </section>
+
+    <section id="consent" class="screen">
+      <div class="steplabel">Step 1 of 3</div>
+      <h1>Informed Consent</h1>
+      <p class="sub">Full details are in the consent form provided by the research team.</p>
+      <div class="card" id="consent-list"></div>
+      <div class="check" id="consent-check" onclick="toggleConsent()">
+        <div class="box"></div>
+        <div>I have read the above and agree to participate in this study.</div>
+      </div>
+      <button class="btn" id="consent-next" disabled onclick="go('register')">Continue</button>
+      <button class="back" onclick="go('welcome')">&larr; Back</button>
+    </section>
+
+    <section id="register" class="screen">
+      <div class="steplabel">Step 2 of 3</div>
+      <h1>Register</h1>
+      <p class="sub">Enter the ID number printed on your badge, then a few details. Used for research only. No name needed.</p>
+      <label class="field"><span class="l">Badge ID</span>
+        <input id="badge" inputmode="numeric" placeholder="e.g. 12" /></label>
+      <label class="field"><span class="l">Gender</span><select id="gender"></select></label>
+      <label class="field"><span class="l">Race</span><select id="race"></select></label>
+      <label class="field"><span class="l">Hispanic or Latino?</span><select id="hispanic"></select></label>
+      <label class="field"><span class="l">Career Stage</span><select id="career"></select></label>
+      <button class="btn" onclick="submitRegister()">Finish</button>
+      <button class="back" onclick="go('consent')">&larr; Back</button>
+    </section>
+
+    <!-- ===== Main tabbed app ===== -->
+    <section id="main" class="screen">
+      <div id="tab-content"></div>
+    </section>
+  </div>
+
+  <div id="a2hs" class="a2hs hidden">
+    <div id="a2hs-text" style="flex:1"></div>
+    <button id="a2hs-act" class="hidden"></button>
+    <button class="x" onclick="dismissA2HS()">×</button>
+  </div>
+
+  <nav id="tabbar" class="tabbar hidden">
+    <button data-tab="program" onclick="setTab('program')"><span class="ti">🗓️</span><span>Program</span></button>
+    <button data-tab="map" onclick="setTab('map')"><span class="ti">🗺️</span><span>Map</span></button>
+    <button data-tab="match" onclick="setTab('match')"><span class="ti">🤝</span><span>Match</span></button>
+    <button data-tab="more" onclick="setTab('more')"><span class="ti">⋯</span><span>More</span></button>
+  </nav>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

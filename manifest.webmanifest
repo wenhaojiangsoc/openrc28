@@ -1,0 +1,11 @@
+{
+  "name": "OpenRC28",
+  "short_name": "OpenRC28",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#faf4eb",
+  "theme_color": "#faf4eb",
+  "icons": [
+    { "src": "icon.png", "sizes": "1024x1024", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
