@@ -121,6 +121,23 @@ button { font-family: inherit; cursor: pointer; }
 .k-keynote .stitle { color: var(--brown); }
 .k-reception .stitle { color: #9c6b2e; }
 
+/* search */
+.search { margin: 4px 0 14px; }
+
+/* clickable session rows inside the schedule */
+.srow { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.srow:last-child { border-bottom: none; }
+.sid { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 9px; background: var(--light); color: var(--brown); font-weight: 800; font-size: 12.5px; display: flex; align-items: center; justify-content: center; }
+.srow .stitle { font-size: 14px; font-weight: 600; }
+.chev { color: var(--gray); font-size: 20px; flex: 0 0 auto; }
+
+/* More menu list */
+.menu { padding: 4px 14px; }
+.mrow { display: flex; align-items: center; gap: 12px; padding: 15px 2px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.mrow:last-child { border-bottom: none; }
+.mrow .ico { font-size: 18px; }
+.mrow .ml { flex: 1; font-size: 15px; font-weight: 600; }
+
 /* add-to-home-screen banner */
 .a2hs { position: fixed; left: 50%; transform: translateX(-50%); bottom: 78px; width: calc(100% - 28px); max-width: 452px;
   background: var(--navy); color: #fff; border-radius: 14px; padding: 12px 14px; display: flex; gap: 10px; align-items: center;

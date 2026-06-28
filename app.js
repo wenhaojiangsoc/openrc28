@@ -15,6 +15,14 @@ let match = null;        // { name, affiliation, topics, arm }
 let currentTab = 'program';
 let matchPhase = 'intro'; // 'intro' | 'profile' (only when not yet joined)
 let revealed = new Set();
+let programView = 'schedule'; // 'schedule' | 'session'
+let currentSession = null;
+let searchQuery = '';
+let moreView = 'list'; // 'list' | 'consent' | 'about' | 'contact'
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 // ---------- helpers ----------
 function go(id) {
@@ -33,6 +41,7 @@ function showMain(tab) {
 }
 function setTab(name) {
   currentTab = name;
+  programView = 'schedule'; moreView = 'list'; searchQuery = ''; // reset sub-views on tab tap
   document.querySelectorAll('#tabbar button').forEach((b) =>
     b.classList.toggle('on', b.dataset.tab === name));
   render();
@@ -96,15 +105,23 @@ function render() {
 }
 
 function renderProgram() {
+  if (programView === 'session' && currentSession) return renderSessionDetail(currentSession);
+
   const days = SCHEDULE.map((d) => `
     <h2>${d.day}</h2>
     <div class="card sched">
-      ${d.items.map((it) => `
-        <div class="sitem k-${it.kind || 'session'}">
-          <div class="stime">${it.time}</div>
-          <div class="sbody"><div class="stitle">${it.title}</div>${it.loc ? `<div class="sloc">${it.loc}</div>` : ''}</div>
-        </div>`).join('')}
+      ${d.items.map((it) => {
+        if ((it.kind || '') === 'session') {
+          const n = (it.title.match(/(\d)/) || [])[1];
+          const subs = SESSIONS.filter((s) => s.id.startsWith(n));
+          return `<div class="sitem k-session"><div class="stime">${it.time}</div><div class="sbody" style="flex:1">${
+            subs.map((s) => `<div class="srow" onclick="openSession('${s.id}')"><div class="sid">${s.id}</div><div style="flex:1;min-width:0"><div class="stitle">${escapeHtml(s.title)}</div><div class="sloc">${s.room}</div></div><span class="chev">›</span></div>`).join('')
+          }</div></div>`;
+        }
+        return `<div class="sitem k-${it.kind || 'session'}"><div class="stime">${it.time}</div><div class="sbody"><div class="stitle">${it.title}</div>${it.loc ? `<div class="sloc">${it.loc}</div>` : ''}</div></div>`;
+      }).join('')}
     </div>`).join('');
+
   setContent(`
     <h1>Welcome to RC28</h1>
     <p class="sub">NYU · Aug 4–7, 2026</p>
@@ -113,23 +130,49 @@ function renderProgram() {
       <div class="nudge-text">The best part of RC28 is who you meet. Open Match to discover scholars who share your interests, and reach out to say hello.</div>
       <button class="btn" style="background:#fff;color:var(--brown);margin-top:12px" onclick="setTab('match')">Open Match →</button>
     </div>
-    ${days}
-    <a class="btn outline" style="display:block;text-align:center;text-decoration:none;margin-top:8px" href="program.pdf" target="_blank" rel="noopener">Full program (PDF) ↗</a>
+    <input id="psearch" class="search" placeholder="Search papers or authors…" oninput="onSearch(this.value)" value="${escapeHtml(searchQuery)}" />
+    <div id="presults"></div>
+    <div id="pschedule">
+      ${days}
+      <a class="btn outline" style="display:block;text-align:center;text-decoration:none;margin-top:8px" href="program.pdf" target="_blank" rel="noopener">Full program (PDF) ↗</a>
+    </div>
+  `);
+  if (searchQuery.trim()) onSearch(searchQuery);
+}
+
+function onSearch(q) {
+  searchQuery = q;
+  const res = document.getElementById('presults');
+  const sched = document.getElementById('pschedule');
+  if (!res || !sched) return;
+  const query = q.trim().toLowerCase();
+  if (!query) { res.innerHTML = ''; sched.style.display = ''; return; }
+  sched.style.display = 'none';
+  const hits = [];
+  for (const s of SESSIONS) for (const p of s.papers) {
+    if (p.authors.toLowerCase().includes(query) || p.title.toLowerCase().includes(query) || s.title.toLowerCase().includes(query)) hits.push({ s, p });
+  }
+  if (!hits.length) { res.innerHTML = `<div class="card"><div class="rtext">No matches for “${escapeHtml(q)}”.</div></div>`; return; }
+  res.innerHTML = `<p class="sub">${hits.length} result${hits.length > 1 ? 's' : ''}</p>` + hits.slice(0, 100).map(({ s, p }) =>
+    `<div class="match" onclick="openSession('${s.id}')"><div class="name" style="font-size:14.5px">${escapeHtml(p.title)}</div><div class="affil">${escapeHtml(p.authors)}</div><div class="tag" style="display:inline-block;margin-top:8px">${s.id} · ${escapeHtml(s.title)}</div></div>`).join('');
+}
+
+function openSession(id) { programView = 'session'; currentSession = id; render(); }
+function backToSchedule() { programView = 'schedule'; render(); }
+
+function renderSessionDetail(id) {
+  const s = SESSIONS.find((x) => x.id === id);
+  if (!s) { backToSchedule(); return; }
+  setContent(`
+    <button class="back" style="text-align:left;margin:0 0 8px" onclick="backToSchedule()">← Schedule</button>
+    <h1 style="font-size:23px">Session ${s.id}</h1>
+    <p class="sub">${escapeHtml(s.title)}<br>${s.room} · ${s.day} ${s.time}</p>
+    ${s.papers.map((p) => `<div class="card"><div class="rlabel" style="font-size:14.5px;line-height:1.35">${escapeHtml(p.title)}</div><div class="rtext" style="margin-top:5px">${escapeHtml(p.authors)}</div></div>`).join('')}
   `);
 }
 
 function renderMap() {
-  setContent(`
-    <h1>Map</h1>
-    <p class="sub">RC28 venue</p>
-    <div class="card">
-      <div class="rlabel" style="font-size:16px">${VENUE.name}</div>
-      <div class="rtext" style="margin:6px 0 12px">${VENUE.address}</div>
-      <a class="btn" style="display:block;text-align:center;text-decoration:none" href="${VENUE.mapsUrl}" target="_blank" rel="noopener">Open in Maps ↗</a>
-    </div>
-    <h2>Rooms</h2>
-    <div class="card"><div class="rtext">${VENUE.rooms}</div></div>
-  `);
+  setContent(`<h1>Map</h1><div class="card"><div class="placeholder">🗺️<div>Coming soon.</div></div></div>`);
 }
 
 function renderMatch() {
@@ -232,19 +275,36 @@ function renderWaitlist() {
   `);
 }
 
+function openMore(v) { moreView = v; render(); }
+function backToMore() { moreView = 'list'; render(); }
+
+function moreDetail(title, body) {
+  setContent(`<button class="back" style="text-align:left;margin:0 0 8px" onclick="backToMore()">← More</button><h1 style="font-size:23px">${title}</h1>${body}`);
+}
+
 function renderMore() {
-  const consent = CONSENT_ITEMS.map(([ico, label, text]) =>
-    `<div class="row"><div class="ico">${ico}</div><div><div class="rlabel">${label}</div><div class="rtext">${text}</div></div></div>`).join('');
+  if (moreView === 'consent') {
+    const consent = CONSENT_ITEMS.map(([ico, label, text]) =>
+      `<div class="row"><div class="ico">${ico}</div><div><div class="rlabel">${label}</div><div class="rtext">${text}</div></div></div>`).join('');
+    return moreDetail('Consent & Privacy',
+      `<div class="card">${consent}</div><div class="note">No audio is ever recorded. Your badge data stays on the badge. Demographics are stored under your badge ID only and used for research only.</div>`);
+  }
+  if (moreView === 'about') {
+    return moreDetail('About the Study',
+      `<div class="card"><div class="rtext">The Open Conference Lab studies how scholars connect at academic conferences, to help make them more inclusive. This study uses a sociometric badge and this app to understand interaction patterns and to test a matchmaking feature. Led by Siwei Cheng (New York University) and Wenhao Jiang (Duke University).</div></div>`);
+  }
+  if (moreView === 'contact') {
+    return moreDetail('Contact',
+      `<div class="card"><div class="rtext">Questions about the study? Reach the research team at the registration desk, or by the email listed on your consent form.</div></div>`);
+  }
   setContent(`
     <h1>More</h1>
     <p class="sub">Study info & settings</p>
-    <h2>Consent & Privacy</h2>
-    <div class="card">${consent}</div>
-    <div class="note">No audio is ever recorded. Your badge data stays on the badge. Demographics are stored under your badge ID only and used for research only.</div>
-    <h2>About the Study</h2>
-    <div class="card"><div class="rtext">The Open Conference Lab studies how scholars connect at conferences, to help make them more inclusive. Led by Siwei Cheng (NYU) and Wenhao Jiang (Duke).</div></div>
-    <h2>Contact</h2>
-    <div class="card"><div class="rtext">Questions? Reach the research team at the registration desk or by the email on your consent form.</div></div>
+    <div class="card menu">
+      <div class="mrow" onclick="openMore('consent')"><span class="ico">🔒</span><span class="ml">Consent & Privacy</span><span class="chev">›</span></div>
+      <div class="mrow" onclick="openMore('about')"><span class="ico">ℹ️</span><span class="ml">About the Study</span><span class="chev">›</span></div>
+      <div class="mrow" onclick="openMore('contact')"><span class="ico">✉️</span><span class="ml">Contact</span><span class="chev">›</span></div>
+    </div>
     <button class="back" onclick="signOut()" style="margin-top:24px">Reset / sign out</button>
   `);
 }
