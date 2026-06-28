@@ -10,9 +10,19 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))));
   self.clients.claim();
 });
+// Network-first: online visitors always get the latest content; the cache is a
+// fallback for offline. This way, updating the site (same URL/QR) reaches users.
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
-  e.respondWith(caches.match(e.request).then((r) => r || fetch(e.request)));
+  e.respondWith(
+    fetch(e.request)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+        return res;
+      })
+      .catch(() => caches.match(e.request))
+  );
 });
 // Fires when a backend sends a push to a subscribed (home-screen-installed) device.
 self.addEventListener('push', (e) => {
