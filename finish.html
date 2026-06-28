@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>Return Badge · OpenRC28</title>
+  <meta name="theme-color" content="#faf4eb" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <section class="screen active">
+      <div class="center" id="root"></div>
+    </section>
+  </div>
+  <script src="config.js"></script>
+  <script>
+    function cloudOn() { return !!CONFIG.SUPABASE_URL && !!CONFIG.SUPABASE_ANON_KEY; }
+    async function logFinish(badge) {
+      if (!cloudOn()) return true;
+      try {
+        const res = await fetch(`${CONFIG.SUPABASE_URL}/rest/v1/badge_events`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: CONFIG.SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
+            Prefer: 'return=minimal',
+          },
+          body: JSON.stringify([{ badge_id: String(badge), event: 'returned', ts: new Date().toISOString() }]),
+        });
+        return res.ok;
+      } catch (e) { return false; }
+    }
+
+    const root = document.getElementById('root');
+    let badge = '';
+    try { const r = JSON.parse(localStorage.getItem('reg') || '{}'); badge = r.badge || ''; } catch (e) {}
+
+    function confirmView() {
+      root.innerHTML = `
+        <div class="logo"><div class="dot top"></div><div class="dot bot"></div></div>
+        <h1>Returning your badge?</h1>
+        <p class="sub">Badge <b>#${badge}</b>. Tap below when you're finished, then hand it back at the desk.</p>
+        <button class="btn" id="go">I'm finished — log it</button>`;
+      document.getElementById('go').onclick = submit;
+    }
+    function askView() {
+      root.innerHTML = `
+        <div class="logo"><div class="dot top"></div><div class="dot bot"></div></div>
+        <h1>Return your badge</h1>
+        <p class="sub">Enter the number printed on your badge, then tap to finish.</p>
+        <input id="b" inputmode="numeric" placeholder="e.g. 12" style="text-align:center" />
+        <button class="btn" id="go">I'm finished — log it</button>`;
+      document.getElementById('go').onclick = () => { badge = document.getElementById('b').value.trim(); if (!badge) { alert('Please enter your badge number.'); return; } submit(); };
+    }
+    async function submit() {
+      root.innerHTML = `<p class="sub">Saving…</p>`;
+      const ok = await logFinish(badge);
+      root.innerHTML = `
+        <div style="font-size:54px">✅</div>
+        <h1>Thank you!</h1>
+        <p class="sub">Badge <b>#${badge}</b> is marked finished${cloudOn() && !ok ? ' (saved locally; please tell the desk)' : ''}. Please return it at the registration desk.</p>`;
+    }
+
+    if (badge) confirmView(); else askView();
+  </script>
+</body>
+</html>
