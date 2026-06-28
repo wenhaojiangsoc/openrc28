@@ -131,6 +131,20 @@ button { font-family: inherit; cursor: pointer; }
 .srow .stitle { font-size: 14px; font-weight: 600; }
 .chev { color: var(--gray); font-size: 20px; flex: 0 0 auto; }
 
+/* collapsible day header */
+.day-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: var(--card);
+  border-radius: 14px; margin: 12px 0 8px; font-weight: 800; font-size: 15px; cursor: pointer; box-shadow: 0 2px 10px rgba(80,50,20,.05); }
+.day-head .chev { font-size: 13px; color: var(--brown); }
+
+/* session detail */
+.sd-id { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; color: var(--caramel); text-transform: uppercase; }
+.meta-pills { display: flex; flex-wrap: wrap; gap: 7px; margin: 2px 0 18px; }
+.pill { background: var(--light); color: var(--brown); border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 700; }
+.paper { background: var(--card); border-radius: 14px; padding: 15px 16px; margin-bottom: 12px;
+  box-shadow: 0 2px 10px rgba(80,50,20,.05); border-left: 3px solid var(--caramel); }
+.ptitle { font-size: 15.5px; font-weight: 700; color: var(--navy); line-height: 1.4; }
+.pauth { font-size: 12.5px; color: var(--brown); margin-top: 7px; line-height: 1.45; }
+
 /* More menu list */
 .menu { padding: 4px 14px; }
 .mrow { display: flex; align-items: center; gap: 12px; padding: 15px 2px; border-bottom: 1px solid var(--line); cursor: pointer; }

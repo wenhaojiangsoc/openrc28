@@ -19,6 +19,12 @@ let programView = 'schedule'; // 'schedule' | 'session'
 let currentSession = null;
 let searchQuery = '';
 let moreView = 'list'; // 'list' | 'consent' | 'about' | 'contact'
+let openDays = new Set([SCHEDULE[0].day]); // collapsible schedule; first day open by default
+
+function toggleDay(day) {
+  if (openDays.has(day)) openDays.delete(day); else openDays.add(day);
+  render();
+}
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -107,10 +113,10 @@ function render() {
 function renderProgram() {
   if (programView === 'session' && currentSession) return renderSessionDetail(currentSession);
 
-  const days = SCHEDULE.map((d) => `
-    <h2>${d.day}</h2>
-    <div class="card sched">
-      ${d.items.map((it) => {
+  const days = SCHEDULE.map((d) => {
+    const open = openDays.has(d.day);
+    const body = !open ? '' : `<div class="card sched">${
+      d.items.map((it) => {
         if ((it.kind || '') === 'session') {
           const n = (it.title.match(/(\d)/) || [])[1];
           const subs = SESSIONS.filter((s) => s.id.startsWith(n));
@@ -119,8 +125,10 @@ function renderProgram() {
           }</div></div>`;
         }
         return `<div class="sitem k-${it.kind || 'session'}"><div class="stime">${it.time}</div><div class="sbody"><div class="stitle">${it.title}</div>${it.loc ? `<div class="sloc">${it.loc}</div>` : ''}</div></div>`;
-      }).join('')}
-    </div>`).join('');
+      }).join('')
+    }</div>`;
+    return `<div class="day-head" onclick="toggleDay('${d.day.replace(/'/g, "\\'")}')"><span>${d.day}</span><span class="chev">${open ? '▲' : '▼'}</span></div>${body}`;
+  }).join('');
 
   setContent(`
     <h1>Welcome to RC28</h1>
@@ -164,10 +172,19 @@ function renderSessionDetail(id) {
   const s = SESSIONS.find((x) => x.id === id);
   if (!s) { backToSchedule(); return; }
   setContent(`
-    <button class="back" style="text-align:left;margin:0 0 8px" onclick="backToSchedule()">← Schedule</button>
-    <h1 style="font-size:23px">Session ${s.id}</h1>
-    <p class="sub">${escapeHtml(s.title)}<br>${s.room} · ${s.day} ${s.time}</p>
-    ${s.papers.map((p) => `<div class="card"><div class="rlabel" style="font-size:14.5px;line-height:1.35">${escapeHtml(p.title)}</div><div class="rtext" style="margin-top:5px">${escapeHtml(p.authors)}</div></div>`).join('')}
+    <button class="back" style="text-align:left;margin:0 0 10px" onclick="backToSchedule()">← Schedule</button>
+    <div class="sd-id">SESSION ${s.id}</div>
+    <h1 style="font-size:22px;margin-top:4px">${escapeHtml(s.title)}</h1>
+    <div class="meta-pills">
+      <span class="pill">${s.room}</span>
+      <span class="pill">${s.day}</span>
+      <span class="pill">${s.time}</span>
+    </div>
+    ${s.papers.map((p) => `
+      <div class="paper">
+        <div class="ptitle">${escapeHtml(p.title)}</div>
+        <div class="pauth">${escapeHtml(p.authors)}</div>
+      </div>`).join('')}
   `);
 }
 
