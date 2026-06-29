@@ -15,6 +15,8 @@ let match = null;        // { name, affiliation, topics, arm }
 let currentTab = 'program';
 let matchPhase = 'intro'; // 'intro' | 'profile' (only when not yet joined)
 let revealed = new Set();
+let returned = null;        // { badge, return_time } once the badge is handed back
+let endConfirm = false;     // End tab: is the confirm-badge sheet open?
 let programView = 'schedule'; // 'schedule' | 'session'
 let currentSession = null;
 let searchQuery = '';
@@ -29,6 +31,21 @@ function toggleDay(day) {
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Safe localStorage: some browsers (Safari Private Mode, locked-down settings)
+// throw on access. Wrapping it keeps startup behavior identical everywhere —
+// a failure just looks like "no saved data" rather than crashing the script.
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  remove(k) { try { localStorage.removeItem(k); } catch (e) {} },
+};
+
+// A registration is only "complete" enough to skip onboarding if every field is
+// present. Partial/corrupt data sends the user back to the welcome page.
+function regComplete(r) {
+  return !!(r && String(r.badge || '').trim() && r.gender && r.race && r.hispanic && r.career);
 }
 
 // The iOS Safari "Share" icon (square with an up arrow), so users know what to look for.
@@ -54,7 +71,7 @@ function showMain(tab) {
 }
 function setTab(name) {
   currentTab = name;
-  programView = 'schedule'; moreView = 'list'; searchQuery = ''; // reset sub-views on tab tap
+  programView = 'schedule'; moreView = 'list'; searchQuery = ''; endConfirm = false; // reset sub-views on tab tap
   document.querySelectorAll('#tabbar button').forEach((b) =>
     b.classList.toggle('on', b.dataset.tab === name));
   render();
@@ -107,7 +124,7 @@ async function submitRegister() {
   const career = document.getElementById('career').value;
   if (!badge || !gender || !race || !hispanic || !career) { alert('Please fill in every field.'); return; }
   reg = { badge, gender, race, hispanic, career };
-  localStorage.setItem('reg', JSON.stringify(reg));
+  store.set('reg', JSON.stringify(reg));
   const ok = await sb('participants', { badge_id: badge, gender, race, hispanic, career_stage: career });
   if (cloudOn() && !ok) alert('Saved on this device, but we could not reach the server. Please check your connection; it will not re-send automatically.');
   showMain('program');
@@ -116,7 +133,7 @@ async function submitRegister() {
 // ---------- tab renderers ----------
 function render() {
   if (currentTab === 'program') return renderProgram();
-  if (currentTab === 'map') return renderMap();
+  if (currentTab === 'end') return renderEnd();
   if (currentTab === 'match') return renderMatch();
   if (currentTab === 'more') return renderMore();
 }
@@ -199,8 +216,73 @@ function renderSessionDetail(id) {
   `);
 }
 
-function renderMap() {
-  setContent(`<h1>Map</h1><div class="card"><div class="placeholder">🗺️<div>Coming soon.</div></div></div>`);
+// ---------- End tab (return your badge) ----------
+function renderEnd() {
+  if (returned) return renderReturned();
+  const badge = (reg && reg.badge) || '';
+  setContent(`
+    <div class="center" style="min-height:70vh">
+      <div style="font-size:54px">🎁</div>
+      <h1>Returning your badge</h1>
+      <p class="sub">When you're finished with the conference, hand your badge back at the registration counter and pick up your gift.</p>
+      <p class="sub" style="margin-bottom:4px">Your badge number</p>
+      <div style="font-size:42px;font-weight:800;color:var(--brown);margin-bottom:6px">#${escapeHtml(badge)}</div>
+      <button class="btn" onclick="openEndConfirm()">I'm returning my badge</button>
+    </div>
+    ${endConfirm ? endConfirmSheet(badge) : ''}
+  `);
+}
+
+function endConfirmSheet(badge) {
+  return `
+    <div class="modal" onclick="if(event.target===this)closeEndConfirm()">
+      <div class="sheet">
+        <button class="x2" onclick="closeEndConfirm()">×</button>
+        <h3 class="ghead">Confirm badge number</h3>
+        <p class="gsub">Make sure this matches the number printed on your badge — correct it here if needed.</p>
+        <label class="field"><span class="l">Badge ID</span>
+          <input id="end-badge" inputmode="numeric" value="${escapeHtml(badge)}" style="text-align:center" /></label>
+        <p class="gsub">Confirming marks the end of your participation. You can undo this right after if it was a mistake.</p>
+        <button class="btn" onclick="confirmReturn()">Confirm return</button>
+        <button class="back" onclick="closeEndConfirm()">Cancel</button>
+      </div>
+    </div>`;
+}
+
+function openEndConfirm() { endConfirm = true; render(); }
+function closeEndConfirm() { endConfirm = false; render(); }
+
+async function confirmReturn() {
+  const badge = (document.getElementById('end-badge').value || '').trim();
+  if (!badge) { alert('Please enter your badge number.'); return; }
+  const return_time = new Date().toISOString();
+  returned = { badge, return_time };
+  store.set('returned', JSON.stringify(returned));
+  endConfirm = false;
+  render();
+  const ok = await sb('badge_events', { badge_id: String(badge), event: 'returned', ts: return_time });
+  if (cloudOn() && !ok) alert('Saved on this device, but we could not reach the server. Please let the registration desk know.');
+}
+
+function renderReturned() {
+  const t = new Date(returned.return_time);
+  const when = isNaN(t.getTime()) ? '' : ` at ${t.toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}`;
+  setContent(`
+    <div class="center" style="min-height:70vh">
+      <div style="font-size:54px">✅</div>
+      <h1>Badge #${escapeHtml(returned.badge)} returned</h1>
+      <p class="sub">Marked returned${when}. Thank you for taking part — please hand your badge to the registration counter and collect your gift.</p>
+      <button class="back" onclick="undoReturn()">Undo — I haven't returned it yet</button>
+    </div>
+  `);
+}
+
+async function undoReturn() {
+  const badge = returned && returned.badge;
+  returned = null;
+  store.remove('returned');
+  render();
+  if (badge) sb('badge_events', { badge_id: String(badge), event: 'return_undone', ts: new Date().toISOString() });
 }
 
 function renderMatch() {
@@ -268,7 +350,7 @@ async function joinMatch() {
   if (!name || !affil || topics.length === 0) { alert('Please add your name, affiliation, and at least one interest.'); return; }
   const arm = isTreatment(reg.badge) ? 'treatment' : 'control';
   match = { name, affiliation: affil, topics, arm };
-  localStorage.setItem('match', JSON.stringify(match));
+  store.set('match', JSON.stringify(match));
   const ok = await sb('match_profiles', { badge_id: reg.badge, name, affiliation: affil, interests: topics, arm });
   if (cloudOn() && !ok) alert('Saved on this device, but we could not reach the server. Please check your connection.');
   renderMatch();
@@ -337,9 +419,10 @@ function renderMore() {
 }
 
 function signOut() {
-  localStorage.removeItem('reg');
-  localStorage.removeItem('match');
-  reg = null; match = null; selectedTopics = new Set(); consentOk = false; matchPhase = 'intro'; revealed = new Set();
+  store.remove('reg');
+  store.remove('match');
+  store.remove('returned');
+  reg = null; match = null; returned = null; endConfirm = false; selectedTopics = new Set(); consentOk = false; matchPhase = 'intro'; revealed = new Set();
   const c = document.getElementById('consent-check');
   c.classList.remove('on'); c.querySelector('.box').textContent = '';
   document.getElementById('consent-next').disabled = true;
@@ -352,7 +435,7 @@ function isStandalone() {
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 }
 function maybeShowA2HS() {
-  if (isStandalone() || localStorage.getItem('a2hs_dismissed')) return;
+  if (isStandalone() || store.get('a2hs_dismissed')) return;
   const banner = document.getElementById('a2hs');
   const text = document.getElementById('a2hs-text');
   const act = document.getElementById('a2hs-act');
@@ -373,7 +456,7 @@ function maybeShowA2HS() {
 }
 function dismissA2HS() {
   document.getElementById('a2hs').classList.add('hidden');
-  localStorage.setItem('a2hs_dismissed', '1');
+  store.set('a2hs_dismissed', '1');
 }
 function setupInstall() {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -393,19 +476,28 @@ function setupInstall() {
   fillSelect('career', CAREER_OPTIONS);
   renderConsentList('consent-list');
 
-  try {
-    const r = localStorage.getItem('reg'); if (r) reg = JSON.parse(r);
-    const m = localStorage.getItem('match'); if (m) { match = JSON.parse(m); selectedTopics = new Set(match.topics || []); }
-  } catch (e) {}
+  let savedReg = null, savedMatch = null;
+  try { const r = store.get('reg'); if (r) savedReg = JSON.parse(r); } catch (e) {}
+  try { const m = store.get('match'); if (m) savedMatch = JSON.parse(m); } catch (e) {}
+  try { const t = store.get('returned'); if (t) returned = JSON.parse(t); } catch (e) {}
 
-  if (reg) {
-    document.getElementById('badge').value = reg.badge || '';
-    document.getElementById('gender').value = reg.gender || '';
-    document.getElementById('race').value = reg.race || '';
-    document.getElementById('hispanic').value = reg.hispanic || '';
-    document.getElementById('career').value = reg.career || '';
+  // Pre-fill the register form with whatever we have, so a returning or
+  // partially-registered user doesn't retype — but only complete registrations
+  // skip onboarding. Everyone else always starts on the welcome page.
+  if (savedReg) {
+    document.getElementById('badge').value = savedReg.badge || '';
+    document.getElementById('gender').value = savedReg.gender || '';
+    document.getElementById('race').value = savedReg.race || '';
+    document.getElementById('hispanic').value = savedReg.hispanic || '';
+    document.getElementById('career').value = savedReg.career || '';
+  }
+
+  if (regComplete(savedReg)) {
+    reg = savedReg;
+    if (savedMatch) { match = savedMatch; selectedTopics = new Set(match.topics || []); }
     showMain('program');
   } else {
+    reg = null; match = null; returned = null;
     go('welcome');
   }
 })();
