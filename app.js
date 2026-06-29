@@ -102,7 +102,7 @@ async function sb(table, row) {
         'Content-Type': 'application/json',
         apikey: CONFIG.SUPABASE_ANON_KEY,
         Authorization: `Bearer ${CONFIG.SUPABASE_ANON_KEY}`,
-        Prefer: 'return=minimal,resolution=ignore-duplicates',
+        Prefer: 'return=minimal',
       },
       body: JSON.stringify([row]),
     });

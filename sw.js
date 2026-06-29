@@ -1,5 +1,5 @@
 /* OpenRC28 service worker: offline app shell + push handling. */
-const CACHE = 'openrc28-v2';
+const CACHE = 'openrc28-v3';
 const ASSETS = ['./', './index.html', './styles.css', './config.js', './sessions.js', './app.js', './icon.png', './manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
