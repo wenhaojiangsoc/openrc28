@@ -7,8 +7,8 @@
  *   Project Settings > API > anon public  -> SUPABASE_ANON_KEY
  */
 const CONFIG = {
-  SUPABASE_URL: '',       // e.g. 'https://abcd1234.supabase.co'
-  SUPABASE_ANON_KEY: '',  // the long "anon public" key
+  SUPABASE_URL: 'https://pcpnetuwxbyypzjakolf.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_ofb7WfjVBymM9RtKHaobjA_cRLC3mzJ', // publishable key (safe to be public)
 };
 
 const GENDER_OPTIONS = ['Man', 'Woman', 'Non-binary', 'Other'];
