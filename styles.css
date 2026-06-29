@@ -102,8 +102,9 @@ button { font-family: inherit; cursor: pointer; }
 .tabbar button.on { color: var(--brown); }
 
 /* program nudge card */
-.nudge { background: var(--brown); color: #fff; border-radius: 18px; padding: 20px; margin-bottom: 18px; }
-.nudge-title { font-size: 19px; font-weight: 800; margin-bottom: 6px; }
+.nudge { position: relative; background: var(--brown); color: #fff; border-radius: 18px; padding: 20px; margin-bottom: 18px; }
+.nudge-x { position: absolute; top: 8px; right: 10px; background: none; border: none; color: rgba(255,255,255,.75); font-size: 22px; line-height: 1; padding: 6px 8px; }
+.nudge-title { font-size: 19px; font-weight: 800; margin-bottom: 6px; padding-right: 24px; }
 .nudge-text { font-size: 14.5px; color: rgba(255,255,255,.92); line-height: 1.5; }
 
 /* placeholders */

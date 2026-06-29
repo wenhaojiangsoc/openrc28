@@ -48,6 +48,14 @@ function regComplete(r) {
   return !!(r && String(r.badge || '').trim() && r.gender && r.race && r.hispanic && r.career);
 }
 
+// Local calendar date (YYYY-MM-DD), used to show the Program nudge once per day.
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function nudgeDismissedToday() { return store.get('nudge_dismissed') === todayKey(); }
+function dismissNudge() { store.set('nudge_dismissed', todayKey()); render(); }
+
 // The iOS Safari "Share" icon (square with an up arrow), so users know what to look for.
 const SHARE_SVG = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>';
 
@@ -158,14 +166,17 @@ function renderProgram() {
     return `<div class="day-head" onclick="toggleDay('${d.day.replace(/'/g, "\\'")}')"><span>${d.day}</span><span class="chev">${open ? '▲' : '▼'}</span></div>${body}`;
   }).join('');
 
-  setContent(`
-    <h1>Welcome to RC28</h1>
-    <p class="sub">NYU · Aug 4–7, 2026</p>
+  const nudge = nudgeDismissedToday() ? '' : `
     <div class="nudge">
+      <button class="nudge-x" onclick="dismissNudge()" aria-label="Dismiss">×</button>
       <div class="nudge-title">Conferences are about people</div>
       <div class="nudge-text">The best part of RC28 is who you meet. Open Match to discover scholars who share your interests, and reach out to say hello.</div>
       <button class="btn" style="background:#fff;color:var(--brown);margin-top:12px" onclick="setTab('match')">Open Match →</button>
-    </div>
+    </div>`;
+  setContent(`
+    <h1>Welcome to RC28</h1>
+    <p class="sub">NYU · Aug 4–7, 2026</p>
+    ${nudge}
     <input id="psearch" class="search" placeholder="Search papers or authors…" oninput="onSearch(this.value)" value="${escapeHtml(searchQuery)}" />
     <div id="presults"></div>
     <div id="pschedule">
